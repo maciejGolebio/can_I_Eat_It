@@ -1,6 +1,16 @@
 import express from 'express';
+import { createProxyMiddleware } from 'http-proxy-middleware';
+
+// TODO during migration to docker move url to env
+const URL = 'https://world.openfoodfacts.org/allergens.json' 
+const PORT = 3000
+
 const app = express();
 
-app.get('/', (req, res) => res.send('Hello World!'));
+// Proxy endpoint
+app.use('/allergens/all', createProxyMiddleware({
+    target: URL,
+    changeOrigin: true,
+ }));
 
-app.listen(3000, () => console.log('Example app listening on port 3000!'));
+app.listen(PORT, () => console.log(`APP listen on PORT ${PORT}`));
