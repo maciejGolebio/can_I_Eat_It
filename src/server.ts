@@ -2,6 +2,8 @@ import express from 'express'
 import { createProxyMiddleware } from 'http-proxy-middleware'
 import https from 'https'
 import bodyParser from 'body-parser'
+import Product  from './models/product.model'
+// import { Member } from './models/member.model'
 
 // TODO during migration to docker move to env
 const URL = 'https://world.openfoodfacts.org'
@@ -19,6 +21,21 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 app.use(bodyParser.raw())
 
+// db 
+const db = require("./models");
+db.mongoose
+    .connect(db.url, {
+        useNewUrlParser: true,
+        useUnifiedTopology: true
+    })
+    .then(() => {
+        console.log("Connected to the database!");
+    })
+    .catch((err: any) => {
+        console.log("Cannot connect to the database!", err);
+        process.exit();
+    });
+
 // Proxy endpoint
 app.get(ENDPOINT_ALL_ALLERGENS, createProxyMiddleware({
     target: URL + ALERGENS_PATH,
@@ -29,42 +46,45 @@ app.get(ENDPOINT_ALL_ALLERGENS, createProxyMiddleware({
 app.post(ENDPOINT_ADD_PRODUCT, (req, res) => {
     // valid req
     req.body.barcode ?? res.send({ "status": 404 })
-    
     // get product from open food
     https.get(productPath(req.body.barcode), (productRes) => {
         let body = ""
         productRes.on("data", (chunk) => { body += chunk })
         productRes.on("end", () => {
-                try{
+            try {
                 var product = JSON.parse(body)
-                }catch(err){
-                    console.error(err)
-                }
-                if (product?.status_verbose == 'product found') {
-                    // get allergens from product
-                    let allergnes  =product.product.allergens.split(',')
-                    // save to db
-            
-                    // send res
-                    res.send({
-                        "status": 201,
-                        "body": {
-                            "message": "saved"
-                        }
-                    })
-                } else {
-                    res.send({
-                        "status": 202,
-                        "body": {
-                            "message": `no product with barcode "${req.body.barcode}"`
-                        }
-                    })
-                }
-                res.end() 
-            })
+            } catch (err) {
+                console.error(err)
+            }
+            if (product?.status_verbose == 'product found') {
+                // get allergens from product
+                const allergnes = product.product.allergens.split(',')
+                // save to db
+                const product_model  = new Product({
+                    Name: product.product.generic_name,
+                    Barcode: req.body.barcode
+                })
+                console.log(product_model)
+                // send res
+                res.send({
+                    "status": 201,
+                    "body": {
+                        "message": "saved"
+                    }
+                })
+            } else {
+                res.send({
+                    "status": 202,
+                    "body": {
+                        "message": `no product with barcode "${req.body.barcode}"`
+                    }
+                })
+            }
+            res.end()
+        })
     }).on("error", (error) => {
         console.log(error.message)
-    })  
+    })
 })
 
 // ?? add group
@@ -80,40 +100,40 @@ app.post(ENDPOINT_ADD_ALLERGEN_TO_MEMBER, (req, res) => {
     // check if member exist
 
     // check if allergen exist
-    https.get(URL+ALERGENS_PATH, (allergensRes) => {
+    https.get(URL + ALERGENS_PATH, (allergensRes) => {
         let body = ""
         allergensRes.on("data", (chunk) => { body += chunk })
         allergensRes.on("end", () => {
-                try{
+            try {
                 var allergens = JSON.parse(body)
-                }catch(err){
-                    console.error(err)
-                }
-                if (!!allergens) {
-                    let isExist= allergens?.tags?.find((element:{name:string})=> element.name == req.body.allergen) ?? false 
-                    if(isExist == false){
-                        res.send({
-                            "status": 202,
-                            "body": {
-                                "message": `no allergen with name "${req.body.allergen}"`
-                            }
-                        })
-                    }
-                    console.log(isExist)
-                    // save to db
-                    
-                    // send res
+            } catch (err) {
+                console.error(err)
+            }
+            if (!!allergens) {
+                let isExist = allergens?.tags?.find((element: { name: string }) => element.name == req.body.allergen) ?? false
+                if (isExist == false) {
                     res.send({
-                        "status": 201,
+                        "status": 202,
                         "body": {
-                            "message": "saved"
+                            "message": `no allergen with name "${req.body.allergen}"`
                         }
                     })
-                } else {
-                    res.send({ "status": 404 })   
                 }
-                res.end() 
-            })
+                console.log(isExist)
+                // save to db
+
+                // send res
+                res.send({
+                    "status": 201,
+                    "body": {
+                        "message": "saved"
+                    }
+                })
+            } else {
+                res.send({ "status": 404 })
+            }
+            res.end()
+        })
     }).on("error", (error) => {
         console.log(error.message)
     })
