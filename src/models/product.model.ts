@@ -6,6 +6,9 @@ const Product = mongoose.model(
         {
             Name: String,
             Barcode: String,
+            Allergens:[{
+                id:String
+            }]
         },
         {
             timestamps: true

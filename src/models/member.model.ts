@@ -5,13 +5,13 @@ const Member = mongoose.model(
     new mongoose.Schema(
         {
             Name: String,
-            Surname:String,
+            Surname: String,
             Allergens: [String],
         },
         {
             timestamps: true
         }
     )
-);
+); 
 
 export { Member } 
