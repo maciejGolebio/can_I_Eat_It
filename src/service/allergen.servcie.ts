@@ -1,9 +1,10 @@
 import https from 'https'
 
 function doOnAllergenIfExist(
+    allergenId:string,
     url: string,
     req: any,
-    action: (request: any, opts?: any) => void,
+    action: (opts?: any) => void,
     failMessage: (AllergenId: string) => string,
     actionOpts?: any) {
     https.get(url, async (allergensRes) => {
@@ -16,17 +17,16 @@ function doOnAllergenIfExist(
                 console.error(err)
             }
             if (!!allergens) {
-                let isAllergen = await allergens.tags?.find((element: { id: string }) => element.id == req.body.allergen) ?? false
-                
+                let isAllergen = await allergens.tags?.find((element: { id: string }) => element.id == allergenId) ?? false
                 if (isAllergen == false) {
                     return {
                         "status": 202,
                         "body": {
-                            "message": failMessage(req.body.allergen)
+                            "message": failMessage(allergenId)
                         }
                     }
                 } else {
-                    await action(req, actionOpts)
+                    await action(actionOpts)
                     return {
                         "status": 201,
                         "body": {

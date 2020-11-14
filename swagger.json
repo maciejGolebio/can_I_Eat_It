@@ -1,0 +1,195 @@
+{
+    "swagger": "2.0",
+    "info": {
+      "version": "1.0.0",
+      "title": "Can i eat it?",
+      "contact": {
+        "email": "mgolebio6@gmail.com"
+      }
+    },
+    "host": "localhost:3000",
+    "basePath": "/",
+    "schemes": [
+      "http"
+    ],
+    "paths": {
+      "/allergens/all": {
+        "get": {
+          "tags": [
+            "allergens"
+          ],
+          "responses": {
+            "200": {
+              "description": "all allergens from open food",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "integer",
+                    "default": 200
+                  },
+                  "allergens": {
+                    "type": "object",
+                    "properties": {
+                      "tags": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "id": {
+                              "type": "string"
+                            },
+                            "url": {
+                              "type": "string"
+                            },
+                            "known": {
+                              "type": "integer"
+                            },
+                            "products": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "/allergens/add/{Name}/{Surname}": {
+        "post": {
+          "tags": [
+            "allergens"
+          ],
+          "produces": [
+            "application/json"
+          ],
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "path",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "Surname",
+              "in": "path",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "in": "body",
+              "description": "id of allergen",
+              "required": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "allergen": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ],
+          "responses": {
+            "201": {
+              "description": "all allergens from open food",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "integer",
+                    "default": 201
+                  },
+                  "body": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "default": "no allergen with name {req.body.allergen}"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "Not found allergen"
+            },
+            "500": {
+              "description": "server err"
+            }
+          }
+        },
+        "put": {
+          "tags": [
+            "allergens"
+          ],
+          "parameters": [
+            {
+              "name": "Name",
+              "in": "path",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "Surname",
+              "in": "path",
+              "required": true,
+              "type": "string"
+            },
+            {
+              "name": "body",
+              "in": "body",
+              "description": "id of allergen",
+              "required": true,
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "allergen": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ],
+          "responses": {
+            "201": {
+              "description": "all allergens from open food",
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "integer",
+                    "default": 201
+                  },
+                  "body": {
+                    "type": "object",
+                    "properties": {
+                      "message": {
+                        "type": "string",
+                        "default": "no allergen with name {req.body.allergen}"
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "404": {
+              "description": "No member or no allergen"
+            },
+            "500": {
+              "description": "server err"
+            }
+          }
+        }
+      }
+    }
+  }
