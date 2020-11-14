@@ -25,6 +25,9 @@ app.use(bodyParser.urlencoded({ extended: true }))
 app.use(bodyParser.json())
 app.use(bodyParser.raw())
 
+const swaggerUi = require('swagger-ui-express'),
+    swaggerDocument = require('./swagger.json');
+
 db.mongoose
     .connect(db.url, {
         useNewUrlParser: true,
@@ -39,11 +42,29 @@ db.mongoose
     });
 
 // Proxy endpoint
-app.get(ENDPOINT_ALL_ALLERGENS, createProxyMiddleware({
-    target: URL + ALERGENS_PATH,
-    changeOrigin: true,
-}))
-
+app.get(ENDPOINT_ALL_ALLERGENS, (req, res) => {
+    https.get(URL + ALERGENS_PATH, (allergensRes) => {
+        let body = ""
+        allergensRes.on("data", (chunk) => { body += chunk })
+        allergensRes.on("end", () => {
+            try {
+                var allergens = JSON.parse(body)
+            } catch (err) {
+                console.error(err)
+            }
+            if (!!allergens) {
+                res.send({
+                    "status": 200,
+                    "allergens": allergens
+                }).end()
+            }else{
+                res.send({
+                    "status": 500
+                }).end()
+            }
+        })
+    })
+})
 
 app.post(ENDPOINT_ADD_PRODUCT, (req, res) => {
     // valid req
@@ -60,7 +81,7 @@ app.post(ENDPOINT_ADD_PRODUCT, (req, res) => {
             }
             if (product?.status_verbose == 'product found') {
                 // get allergens id from product
-                const allergnes = product.product.allergens.split(',').map(function(elem:string){return {"id":elem}})
+                const allergnes = product.product.allergens.split(',').map(function (elem: string) { return { "id": elem } })
                 console.log(allergnes)
                 // save to db
                 await new Product({
@@ -125,7 +146,7 @@ app.get(ENDPOINT_GET_MEMBER, async (req, res) => {
 
 app.post(ENDPOINT_ADD_ALLERGEN_TO_MEMBER, (req, res) => {
     // valid req
-    req.body.allergen ?? res.send({ "status": 404 })
+    req.body.allergen ?? res.send({ "status": 400 })
 
     // check if allergen exist
     https.get(URL + ALERGENS_PATH, async (allergensRes) => {
@@ -141,7 +162,7 @@ app.post(ENDPOINT_ADD_ALLERGEN_TO_MEMBER, (req, res) => {
                 let isAllergen = await allergens.tags?.findOne((element: { id: string }) => element.id == req.body.allergen) ?? false
                 if (isAllergen == false) {
                     res.send({
-                        "status": 202,
+                        "status": 404,
                         "body": {
                             "message": `no allergen with name "${req.body.allergen}"`
                         }
@@ -161,7 +182,7 @@ app.post(ENDPOINT_ADD_ALLERGEN_TO_MEMBER, (req, res) => {
                     }
                 })
             } else {
-                res.send({ "status": 404 })
+                res.send({ "status": 500 })
             }
             res.end()
         })
@@ -176,20 +197,20 @@ app.put(ENDPOINT_ADD_ALLERGEN_TO_MEMBER, async (req, res) => {
     const member = await Member.findOne({ Name: req.params.Name, Surname: req.params.Surname }).exec()
     if (!!member) {
         // check if allergen exist
-        const opts = { "member": member }
+        const opts = { "member": member, Name: req.params.Name, Surname: req.params.Surname, allergenId: req.body.allergen }
         if (member.get('Allergens').indexOf(req.body.allergen) != -1) {
-            res.send({ "status": 202, "body": { "message": `Member "${req.params.Name} ${req.params.Surname} had this allergen:${req.body.allergen}` } }).end()
+            res.send({ "status": 404, "body": { "message": `Member "${req.params.Name} ${req.params.Surname} had this allergen:${req.body.allergen}` } }).end()
             return
         }
-
         res.send(
             doOnAllergenIfExist(
+                req.body.allergen,
                 URL + ALERGENS_PATH, req,
-                async (request, opts) => {
+                async (opts) => {
                     console.log(opts.member['Allergens'])
-                    opts.member.Allergens.push(request.body.allergen)
+                    opts.member.Allergens.push(opts.allergenId)
                     await Member.findOneAndUpdate(
-                        { Name: request.params.Name, Surname: request.params.Surname }, { Allergens: opts.member.Allergens }
+                        { Name: opts.Name, Surname: opts.Surname }, { Allergens: opts.member.Allergens }
                     );
                 },
                 (allergenId) => `No allergen with id "${allergenId}`,
@@ -197,7 +218,7 @@ app.put(ENDPOINT_ADD_ALLERGEN_TO_MEMBER, async (req, res) => {
         ).end()
     } else {
         res.send({
-            "status": 202,
+            "status": 404,
             "body": {
                 "message": `no member with name "${req.params.Name}" and surname "${req.params.Surname}"`
             }
@@ -206,17 +227,19 @@ app.put(ENDPOINT_ADD_ALLERGEN_TO_MEMBER, async (req, res) => {
 })
 
 app.get(ENDPOINT_GET_ALLOWED_PRODUCT_TO_MEMBER, async (req, res) => {
-    const member: any =  await Member.findOne({ Name: req.params.Name, Surname: req.params.Surname }).exec()
+    const member: any = await Member.findOne({ Name: req.params.Name, Surname: req.params.Surname }).exec()
     if (!!member) {
         console.log(member.Allergens)
-        const products = await Product.find({"Allergens.id": {$nin : member.Allergens}})
-        res.send({"status":200, "body":{"products": products}})
-    }else{
+        const products = await Product.find({ "Allergens.id": { $nin: member.Allergens } })
+        res.send({ "status": 200, "body": { "products": products } })
+    } else {
         res.send({
-            "status":404
+            "status": 404
         })
     }
-    
+
 })
+
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument))
 
 app.listen(PORT, () => console.log(`APP listen on PORT ${PORT}`))

@@ -32,6 +32,7 @@
     "@types/mongoose": "^5.7.37",
     "express": "^4.17.1",
     "http-proxy-middleware": "^1.0.6",
-    "mongoose": "^5.10.13"
+    "mongoose": "^5.10.13",
+    "swagger-ui-express": "^4.1.4"
   }
 }
